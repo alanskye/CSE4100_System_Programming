@@ -5,10 +5,10 @@
 #include <sigsafelibs.h>
 
 enum syntax_tree_type {
-    SYNTAX_TREE_PATH    = (1 << 0);
-    SYNTAX_TREE_ARG     = (1 << 1);
-    SYNTAX_TREE_PIPE    = (1 << 2);
-    SYNTAX_TREE_BCKGRD  = (1 << 3);
+    SYNTAX_TREE_PATH    = (1 << 0),
+    SYNTAX_TREE_ARG     = (1 << 1),
+    SYNTAX_TREE_PIPE    = (1 << 2),
+    SYNTAX_TREE_BCKGRD  = (1 << 3)
 };
 
 struct syntax_tree {
@@ -28,5 +28,7 @@ void syntax_tree_merge(
         struct syntax_tree* right);
 
 void syntax_tree_delete(struct syntax_tree* root);
+
+void syntax_tree_traverse(struct syntax_tree* root);
 
 #endif

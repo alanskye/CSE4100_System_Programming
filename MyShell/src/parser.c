@@ -48,6 +48,10 @@ bool term(enum token_type required_type, char** data) {
         return false;
     }
     struct token* token = list_entry(glob_token_elem, struct token, elem);
+
+    // printf("\t\treq type = %d\n", required_type);
+    // print_token(token);
+    
     if (token->type == required_type) {
         if (data != NULL) {
             *data = sigsafe_malloc(sizeof(char) * (strlen(token->word) + 1));
@@ -56,22 +60,24 @@ bool term(enum token_type required_type, char** data) {
         glob_token_elem = list_next(glob_token_elem);
         return true;
     }
+
+    glob_token_elem = list_next(glob_token_elem);
     return false;
 }
 
 int parse(struct list* token_list, struct syntax_tree** syntax_tree) {
     assert (list_size(token_list) > 0);
-    global_token_list = token_list;
-    global_token_elem = list_begin(token_list);
+    glob_token_list = token_list;
+    glob_token_elem = list_begin(token_list);
     *syntax_tree = cmd_list_selector();
     // error checking
-    if (*syntax_tree == NULL) {
+    if (glob_token_elem != list_end(token_list) || *syntax_tree == NULL) {
         printf("Syntax Error: ");
         if (glob_token_elem == list_end(glob_token_list)) {
             printf("at end of line\n");
         }
         else {
-            struct token* token = list_entry(glob_token_list, struct token*, elem);
+            struct token* token = list_entry(glob_token_elem, struct token, elem);
             printf("at %s\n", token->word);
         }
         return -1;
@@ -83,9 +89,9 @@ struct syntax_tree* cmd_list_selector() {
     struct syntax_tree* cmd_list;
     struct list_elem* saved_token_elem = glob_token_elem;
 
-    selector_macro(cmd_list, cmd_list_1());
-    selector_macro(cmd_list, cmd_list_2());
     selector_macro(cmd_list, cmd_list_3());
+    selector_macro(cmd_list, cmd_list_2());
+    selector_macro(cmd_list, cmd_list_1());
 
     return NULL;
 }
@@ -116,7 +122,7 @@ struct syntax_tree* cmd_list_2() {
 }
 
 // <job> '&' <command_list>
-struct syntax_tree* cmd_line_3() {
+struct syntax_tree* cmd_list_3() {
     struct syntax_tree* job;
     struct syntax_tree* cmd_list;
     struct syntax_tree* result;
@@ -138,7 +144,7 @@ struct syntax_tree* cmd_line_3() {
 
     result = syntax_tree_new(NULL, SYNTAX_TREE_BCKGRD);
     syntax_tree_merge(result, job, cmd_list);
-
+    puts("cmd_list_3!");
     return result;
 }
 
@@ -146,8 +152,8 @@ struct syntax_tree* job_selector() {
     struct syntax_tree* job;
     struct list_elem* saved_token_elem = glob_token_elem;
 
-    selector_macro(job, job_1());
     selector_macro(job, job_2());
+    selector_macro(job, job_1());
 
     return NULL;
 }
@@ -156,7 +162,7 @@ struct syntax_tree* job_1() {       // <command>
     return cmd_selector();
 }
 
-struct syntax_tree* job_2() {
+struct syntax_tree* job_2() {       // <command> '|' <job>
     struct syntax_tree* cmd;
     struct syntax_tree* job;
     struct syntax_tree* result;
@@ -169,16 +175,19 @@ struct syntax_tree* job_2() {
         syntax_tree_delete(cmd);
         return NULL;
     }
+    puts("PIPE DETECTED");
+    // print_token(list_entry(glob_token_elem, struct token, elem));
 
     if ((job = job_selector()) == NULL) {
         syntax_tree_delete(cmd);
         return NULL;
     }
 
+    puts("pipe and job detected");
     result = syntax_tree_new(NULL, SYNTAX_TREE_PIPE);
     syntax_tree_merge(result, cmd, job);
 
-    return NULL;
+    return result;
 }
 
 // <job> '|' <command>
@@ -193,8 +202,8 @@ struct syntax_tree* cmd_selector() {
 }
 
 struct syntax_tree* cmd_1() {       // <path> <arg_list>
-    struct synax_tree* arg_list;
-    struct synax_tree* result;
+    struct syntax_tree* arg_list;
+    struct syntax_tree* result;
     char* path;
     if (!term(TOKEN_WORD, &path)) {
         return NULL;
@@ -228,10 +237,11 @@ struct syntax_tree* arg_list_1() {
         return NULL;
     }
 
-    arg_list_tree = arg_list();
+    arg_list = arg_list_selector();
 
-    result = syntax_tree_new(data, SYNTAX_TREE_ARG);
+    result = syntax_tree_new(arg, SYNTAX_TREE_ARG);
     syntax_tree_merge(result, NULL, arg_list);
+
     return result;
 }
 

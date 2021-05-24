@@ -41,3 +41,16 @@ void syntax_tree_delete(struct syntax_tree* root) {
     free(root);
 }
 
+
+void syntax_tree_traverse(struct syntax_tree* root) {
+    if (root == NULL) {
+        puts("root return");
+        return;
+    }
+    // in-order fashion
+    syntax_tree_traverse(root->left);
+    printf("syntax_tree data: %s\n", root->data == NULL ? "NULL" : root->data);
+    printf("syntax_tree type: %d\n", root->type);
+    syntax_tree_traverse(root->right);
+}
+

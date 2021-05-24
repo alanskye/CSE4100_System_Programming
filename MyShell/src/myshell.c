@@ -3,30 +3,40 @@
 
 // prototypes
 static int read_command(char**);
+static void free_resources(char*, struct list*, struct syntax_tree*);
 
 int main() {
     // TODO: ignore CTRL+C
     
     while (true) {
         char* cmd_buffer = NULL;
-        struct list* token_list;
+        struct list* token_list = NULL;
+        struct syntax_tree* syntax_tree = NULL;
+        
         // TODO: read a line
         int cmd_len = read_command(&cmd_buffer);
 
         // TODO: tokenzie the given line
-        tokenize(cmd_buffer, cmd_len, &token_list);
+        token_list = malloc(sizeof(struct list));
+        tokenize(cmd_buffer, cmd_len, token_list);
         show_tokens(token_list);
-
-        // TODO: build a parse tree
         if (list_size(token_list) == 0) {
+            free_resources(cmd_buffer, token_list, syntax_tree);
             continue;
         }
-        // TODO: execute over the tree
-        parse(token_list);
-        // TODO: clear the resources
-        if (cmd_buffer != NULL) {
-            free(cmd_buffer);
+
+        // TODO: build a parse tree
+        if (parse(token_list, &syntax_tree) != 0) {
+            free_resources(cmd_buffer, token_list, syntax_tree);
+            continue;
         }
+
+        syntax_tree_traverse(syntax_tree);
+        
+        // TODO: execute over the tree
+
+        // TODO: clear the resources
+
     }
     return -1;
 }
@@ -49,5 +59,20 @@ static int read_command(char** cmd_buffer) {
         exit(0);
     }
     return (int)read_len;
+}
+
+
+
+static void free_resources(
+        char* cmd_buffer, 
+        struct list* token_list, 
+        struct syntax_tree* syntax_tree) {
+
+        if (cmd_buffer != NULL) {
+            free(cmd_buffer);
+        }
+        if (token_list != NULL) {
+            destroy_token_list(token_list);
+        }
 }
 

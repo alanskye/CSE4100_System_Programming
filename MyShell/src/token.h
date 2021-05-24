@@ -33,8 +33,9 @@ struct token {
     enum token_type type;
 };
 
-int tokenize(char line_buffer[], int len, struct list** token_list);
+int tokenize(const char cmd_buffer[], const int cmd_len, struct list* token_list);
+void print_token(struct token* token);
 void show_tokens(struct list* token_list);
-void destroy_tokens();
+void destroy_token_list(struct list* token_list);
 
 #endif
