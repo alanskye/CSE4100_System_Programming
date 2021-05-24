@@ -8,4 +8,5 @@ void unix_error(char msg[]);
 #define MAX_TRIAL 32
 void* sigsafe_malloc(size_t size);
 void* sigsafe_calloc(size_t num, size_t size);
+void* sigsafe_realloc(void* ptr, size_t new_size);
 #endif

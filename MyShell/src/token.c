@@ -1,11 +1,46 @@
 #include "token.h"
 
-static struct token* new_token(char* word, int type) {
+static struct token* token_new(char* word, int type) {
     struct token* token = malloc(sizeof(struct token));
-    token->word = sigsafe_malloc(sizeof(char) * strlen(word) + 1);
+    token->word = sigsafe_malloc(sizeof(char) * (strlen(word) + 1));
     strcpy(token->word, word);
     token->type = type;
     return token;
+}
+
+static void token_free(struct token* token) {
+    assert (token != NULL);
+    free(token->word);
+    free(token);
+}
+
+static void token_replace(struct token* token, char *word, int type) {
+    free(token->word);
+    token->word = sigsafe_malloc(sizeof(char) * (strlen(word) + 1));
+    strcpy(token->word, word);
+    token->type = type;
+}
+
+static void token_remove_quotes(struct token* token) {
+    printf("before trim = %s\n", token->word);
+    int word_len = strlen(token->word);
+    char qtype = CHAR_NULL;
+    int temp_idx = 0;
+    for (int word_idx = 0; word_idx < word_len; word_idx++) {
+        char ch = token->word[word_idx];
+        if (qtype == CHAR_NULL && (ch == CHAR_QUOTE || ch == CHAR_DBQUOTE)) {
+            qtype = ch;
+        }
+        else if (ch == qtype) {
+            qtype = 0;
+        }
+        else {
+            token->word[temp_idx++] = ch;
+        }
+    }
+    token->word[temp_idx++] = CHAR_NULL;
+    token->word = sigsafe_realloc(token->word, sizeof(char) * temp_idx);
+    printf("after trim = %s\n", token->word);
 }
 
 static void clear_buffer(char* word, int* idx) {
@@ -23,100 +58,117 @@ int tokenize(char cmd_buffer[], int cmd_len, struct list** token_list_ptr) {
     struct list* token_list = *token_list_ptr;
     char ch;
     char* word_buffer = sigsafe_calloc(cmd_len, sizeof(char));
-    enum char_type ch_type;
     int cmd_idx = 0, word_idx = 0;
-    int tok_cnt = 0;
     enum tokenizer_state state = TOKENIZER_NORMAL;
 
     list_init(token_list);
-    
+
     do {
         ch = cmd_buffer[cmd_idx];
-        ch_type = ch;
 
         switch (state) {
             case TOKENIZER_NORMAL:
-                switch (ch_type) {
-                    case CHAR_AMP:
-                    case CHAR_PIPE:
-                        if (word_idx > 0) {
-                            // end the token that was reading before
-                            list_push_back(token_list, &new_token(word_buffer, ch_type)->elem);
-                            clear_buffer(word, &word_idx);
-                        }
-
-                        word_buffer[word_idx] = ch_type;
-                        list_push_back(token_list, &new_token(word_buffer, ch_type)->elem);
-                        clear_buffer(word, &word_idx);
-                        break;
-                              
-                    case CHAR_QUOTE:
-                        state = TOKENIZER_QUOTED;
-                        word_buffer[word_idx++] = CHAR_QUOTE;
-                        break;
-
-                    case CHAR_DBQUOTE:
-                        state = TOKENIZER_DBQUOTED;
-                        word_buffer[word_idx++] = CHAR_QUOTE;
-                        break;
-                    
-                    case CHAR_WSPACE:
-                        if (word_idx > 0) {
-                            list_push_back(token_list, &new_token(word_buffer, ch_type)->elem);
-                            clear_buffer(word, &word_idx);
-                        }
-                        break;
-           
-                    default:
-                        word_buffer[word_idx++] = ch;
-                        break;
+                if (ch == CHAR_AMP || ch == CHAR_PIPE) {
+                    if (word_idx > 0) {
+                        // end the token that was reading before
+                        list_push_back(token_list, &token_new(word_buffer, TOKEN_WORD)->elem);
+                        clear_buffer(word_buffer, &word_idx);
+                    }
+                    word_buffer[word_idx++] = ch;
+                    list_push_back(token_list, &token_new(word_buffer, ch)->elem);
+                    clear_buffer(word_buffer, &word_idx);
                 }
+
+                else if (ch == CHAR_QUOTE) {
+                    state = TOKENIZER_QUOTED;
+                    word_buffer[word_idx++] = CHAR_QUOTE;
+                }
+
+                else if (ch == CHAR_DBQUOTE) {
+                    state = TOKENIZER_DBQUOTED;
+                    word_buffer[word_idx++] = CHAR_DBQUOTE;
+                }
+
+                else if (ch == CHAR_ESCSEQ) {
+                    word_buffer[word_idx++] = ch;
+                }
+
+                else if (ch == CHAR_WSPACE) {
+                    if (word_idx > 0) {
+                        list_push_back(token_list, &token_new(word_buffer, TOKEN_WORD)->elem);
+                        clear_buffer(word_buffer, &word_idx);
+                    }
+                }
+
+                else {
+                    word_buffer[word_idx++] = ch;
+                }
+
                 break;
 
             case TOKENIZER_QUOTED:
                 word_buffer[word_idx++] = ch;
-                if (ch_type == CHAR_QUOTE) {
+                if (ch == CHAR_QUOTE) {
                     state = TOKENIZER_NORMAL;
                 }
                 break;
 
             case TOKENIZER_DBQUOTED:
                 word_buffer[word_idx++] = ch;
-                if (ch_type == CHAR_DBQUOTE) {
-                    state = TOKENIZER_DBQUOTED;
+                if (ch == CHAR_DBQUOTE) {
+                    state = TOKENIZER_NORMAL;
                 }
                 break;
         }
 
-        if (ch_type == CHAR_NULL) {
+        if (ch == CHAR_NULL) {
             if (word_idx > 0) {
-                list_push_back(token_list, &new_token(word_buffer, ch_type)->elem);
-                clear_buffer(word, &word_idx);
+                list_push_back(token_list, &token_new(word_buffer, TOKEN_WORD)->elem);
+                clear_buffer(word_buffer, &word_idx);
             }
         }
 
         cmd_idx++;
 
-    } while (ch != '\0');
+    } while (ch != CHAR_NULL);
 
-    for (   struct elem* it = list_begin(token_list); 
+    for (   struct list_elem* it = list_begin(token_list); 
             it != list_end(token_list); 
             it = list_next(it)) {
 
         struct token* token = list_entry(it, struct token, elem);
+        // printf("glob tokword = %s %d\n", token->word, token->type);
         if (token->type == TOKEN_WORD) {
             glob_t glob_buf;
             glob(token->word, GLOB_TILDE, NULL, &glob_buf);
             if (glob_buf.gl_pathc > 0) {
                 // replace the first one
-                it->word = 0;
-
+                token_replace(token, glob_buf.gl_pathv[0], TOKEN_WORD);
                 // the current token with the first one
+                for (size_t i = 1; i < glob_buf.gl_pathc; i++) {
+                    list_insert(&token->elem, &token_new(glob_buf.gl_pathv[i], TOKEN_WORD)->elem);
+                }
+            }
+            else {
+                token_remove_quotes(token);
             }
         }
     }
-
     free(word_buffer);
+    return 0;
+}
+
+
+void show_tokens(struct list* token_list) {
+    int i = 0;
+    for (   struct list_elem* it = list_begin(token_list); 
+            it != list_end(token_list); 
+            it = list_next(it)) {
+        struct token* token = list_entry(it, struct token, elem);
+        printf("token [%d]\n", i++);
+        printf("token->word: %s\n", token->word);
+        printf("token->type: %d\n", token->type);
+    }
 }
 
 void destroy_tokens() {

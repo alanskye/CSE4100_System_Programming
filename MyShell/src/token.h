@@ -5,17 +5,15 @@
 #include "lib/sigsafelibs.h"
 #include "lib/list.h"
 
-enum char_type {
-    CHAR_NULL       = '\0',
-    CHAR_NEWLINE    = '\n',
-    CHAR_WSPACE     = ' ',
-    CHAR_TAB        = '\t',
-    CHAR_PIPE       = '|',
-    CHAR_AMP        = '&',
-    CHAR_QUOTE      = '\'',
-    CHAR_DBQUOTE    = '\"',
-    CHAR_ESCSEQ     = '\\'
-};
+#define CHAR_NULL       '\0'
+#define CHAR_NEWLINE    '\n'
+#define CHAR_WSPACE     ' '
+#define CHAR_TAB        '\t'
+#define CHAR_PIPE       '|'
+#define CHAR_AMP        '&'
+#define CHAR_QUOTE      '\''
+#define CHAR_DBQUOTE    '\"'
+#define CHAR_ESCSEQ     '\\'
 
 enum tokenizer_state {
     TOKENIZER_NORMAL,
@@ -24,7 +22,7 @@ enum tokenizer_state {
 };
 
 enum token_type {
-    TOKEN_WORD,
+    TOKEN_WORD = 0,
     TOKEN_PIPE,
     TOKEN_AMP
 };
@@ -36,6 +34,7 @@ struct token {
 };
 
 int tokenize(char line_buffer[], int len, struct list** token_list);
+void show_tokens(struct list* token_list);
 void destroy_tokens();
 
 #endif
