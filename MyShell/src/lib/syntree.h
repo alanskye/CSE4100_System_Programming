@@ -4,20 +4,29 @@
 #include <commonlibs.h>
 #include <sigsafelibs.h>
 
-
-enum syntree_type {
-    SYNTREE_PATH    = (1 << 0);
-    SYNTREE_ARG     = (1 << 1);
-    SYNTREE_PIPE    = (1 << 2);
-    SYNTREE_BCKGRD  = (1 << 3);
+enum syntax_tree_type {
+    SYNTAX_TREE_PATH    = (1 << 0);
+    SYNTAX_TREE_ARG     = (1 << 1);
+    SYNTAX_TREE_PIPE    = (1 << 2);
+    SYNTAX_TREE_BCKGRD  = (1 << 3);
 };
 
-struct syntree {
-    enum syntree_type;
+struct syntax_tree {
     char *data;
-    struct syntree* left;
-    struct syntree* right;
+    enum syntax_tree_type type;
+    struct syntax_tree* left;
+    struct syntax_tree* right;
 };
 
+struct syntax_tree* syntax_tree_new(
+        char* data,
+        enum syntax_tree_type type);
+
+void syntax_tree_merge(
+        struct syntax_tree* root,
+        struct syntax_tree* left,
+        struct syntax_tree* right);
+
+void syntax_tree_delete(struct syntax_tree* root);
 
 #endif
