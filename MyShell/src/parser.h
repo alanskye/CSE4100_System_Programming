@@ -3,7 +3,7 @@
 
 #include "lib/commonlibs.h"
 #include "lib/sigsafelibs.h"
-#include "lib/syntree.h"
+#include "syntax.h"
 #include "token.h"
 
 int parse(

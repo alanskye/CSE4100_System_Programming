@@ -1,5 +1,6 @@
 #include "myshell.h"
 
+struct list job_list;
 
 // prototypes
 static int read_command(char**);
@@ -8,21 +9,30 @@ static void free_resources(char*, struct list*, struct syntax_tree*);
 int main() {
     // TODO: ignore CTRL+C
     
+    shell_init_and_ignore();
+    shell_activate_reaper();
+
     while (true) {
         char* cmd_buffer = NULL;
         struct list* token_list = NULL;
         struct syntax_tree* syntax_tree = NULL;
         
         // TODO: read a line
+        rewind(stdin);
         int cmd_len = read_command(&cmd_buffer);
+        if (cmd_len == 0) {
+            continue;
+        }
 
         // TODO: tokenzie the given line
         token_list = malloc(sizeof(struct list));
         tokenize(cmd_buffer, cmd_len, token_list);
-        show_tokens(token_list);
         if (list_size(token_list) == 0) {
             free_resources(cmd_buffer, token_list, syntax_tree);
             continue;
+        }
+        else {
+            show_tokens(token_list);
         }
 
         // TODO: build a parse tree
@@ -34,7 +44,7 @@ int main() {
         syntax_tree_traverse(syntax_tree);
         
         // TODO: execute over the tree
-
+        execute(syntax_tree);
         // TODO: clear the resources
 
     }
@@ -73,6 +83,10 @@ static void free_resources(
         }
         if (token_list != NULL) {
             destroy_token_list(token_list);
+        }
+
+        if (syntax_tree != NULL) {
+            syntax_tree_delete(syntax_tree);
         }
 }
 

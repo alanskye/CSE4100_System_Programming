@@ -189,5 +189,6 @@ void destroy_token_list(struct list* token_list) {
         }
         free(token);
     }
+    free(token_list);
 }
 
