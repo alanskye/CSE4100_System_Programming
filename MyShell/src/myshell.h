@@ -18,8 +18,8 @@ struct job_info {
     int state;
 };
 
-#define job_running 0
-#define job_stopped 1
-#define job_killed  2
+int jobs(int argc, char* argv[]);
+int bg(int argc, char* argv[]);
+int fg(int argc, char* argv[]);
 
 #endif

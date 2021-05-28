@@ -90,3 +90,34 @@ static void free_resources(
         }
 }
 
+int jobs(int argc, char* argv[]) {
+    struct list_elem* it;
+    int no = 1;
+    for (   it = list_begin(&job_list);
+            it != list_end(&job_list);
+            it = list_next(it)
+        )
+    {
+        struct job_info* job_info = list_entry(it, struct job_info, elem);
+        printf("[%03d, pid = %06d]", no++, job_info->pid);
+        if (job_info->state == job_running) {
+            printf("running");
+        }
+        else {
+            printf("stopped");
+        }
+        printf("\n");
+    }
+    if (no == 1) {
+        puts("no jobs");
+    }
+    return 0;
+}
+
+int bg(int argc, char* argv[]) {
+    
+}
+
+int fg(int argc, char* argv[]) {
+
+}

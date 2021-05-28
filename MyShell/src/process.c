@@ -1,10 +1,16 @@
 #include "process.h"
 
+
 struct job_info* job_info_new(pid_t pid, int state) {
     struct job_info* job_info = malloc(sizeof(job_info));
     job_info->pid = pid;
     job_info->state = state;
     return job_info;
+}
+
+void job_info_delete(struct list_elem* it) {
+    struct job_info* job_info = list_entry(it, struct job_info, elem);
+    free(job_info);
 }
 
 bool job_list_find(pid_t pid) {
@@ -23,6 +29,7 @@ bool job_list_find(pid_t pid) {
 }
 
 void job_list_update(pid_t pid, int state) {
+    printf("job list update | pid %d | state %d\n", pid, state);
     struct list_elem* it;
     for (   it = list_begin(&job_list);
             it != list_end(&job_list);
@@ -30,6 +37,7 @@ void job_list_update(pid_t pid, int state) {
         )
     {
         struct job_info* job_info = list_entry(it, struct job_info, elem);
+        printf("job_info->pid = %d\n", job_info->pid);
         if (job_info->pid == pid) {
             if (state == job_killed) {
                 list_remove(it);
@@ -42,28 +50,11 @@ void job_list_update(pid_t pid, int state) {
             }
         }
     }
-}
-
-void job_list_show() {
-    struct list_elem* it;
-    for (   it = list_begin(&job_list);
-            it != list_end(&job_list);
-            it = list_next(it)
-        )
-    {
-        struct job_info* job_info = list_entry(it, struct job_info, elem);
-        printf("Process [%8d]: ");
-        if (job_info->state == job_running) {
-            printf("running");
-        }
-        else {
-            printf("stopped");
-        }
-        printf("\n");
-    }
+   //  assert("job not in the list" && false);
 }
 
 void process_sigtstp_handler(int signum) {
+    puts("sigtstp detected");
     job_list_update(getpid(), job_stopped);
     SIGTSTP_DEFAULT_HANDLER(signum);
 }
@@ -110,10 +101,6 @@ int process_cd(int argc, char** argv) {
     return 0;
 }
 
-int process_exit() {
-    _exit(0);
-}
-
 int process_init(
         struct process_info* p_info,
         struct syntax_tree* syntax_tree,
@@ -156,19 +143,35 @@ int process_init(
 
 void process_exec(struct process_info* p_info) {
 
-    if (strcmp(p_info->argv[0], "cd") == 0) {
+#define MYSH_BUILT_IN(x) (strcmp(p_info->argv[0], x) == 0)
+    if (MYSH_BUILT_IN("cd")) {
         process_cd(p_info->argc, p_info->argv);
         return;
     }
-    else if (strcmp(p_info->argv[0], "exit") == 0) {
-        process_exit();
+    if (MYSH_BUILT_IN("exit")) {
+        _exit(0);
+    }
+    if (MYSH_BUILT_IN("jobs")) {
+        jobs(p_info->argc, p_info->argv);
+        return;
+    }
+    if (MYSH_BUILT_IN("bg")) {
+        bg(p_info->argc, p_info->argv);
+        return;
+    }
+    if (MYSH_BUILT_IN("fg")) {
+        fg(p_info->argc, p_info->argv);
+        return;
     }
 
     pid_t pid;
 
     int fd_stdout = dup(STDIN_FILENO);
 
-    if ((pid = fork() == 0)) {
+    printf("job list before exec\n");
+    jobs(0, NULL);
+    
+    if ((pid = fork()) == 0) {
         // restore sigint for child 
         shell_restore_sigint();
         shell_restore_sigtstp();
@@ -184,32 +187,31 @@ void process_exec(struct process_info* p_info) {
         if (p_info->pipe_out) {
             dup2(p_info->fd_out, STDOUT_FILENO);
         }
-
-        list_push_back(&job_list, &job_info_new(pid, job_running)->elem);
-        if (execvp(p_info->argv[0], p_info->argv) == -1) {
-            job_list_update(pid, job_killed);
+        
+        if (execve(p_info->argv[0], p_info->argv, environ) == -1) {
             dup2(fd_stdout, STDOUT_FILENO);
             printf("Command '%s' not found.\n", p_info->argv[0]);
-            _exit(1);
+            _exit(COMMAND_NOT_FOUND);
         }
-        else {
-            
-        }
+
     }
     else if (pid < 0) {
         perror("fork error");
         return;
-    }
-
-    if (p_info->sync_mode == SYNC) {
-        while (job_list_find(pid));
-        puts("sync job finisihed");
-    }
-    else if (p_info->sync_mode == ASYNC) { // ASYNC
-        return;
-    }
+    } 
     else {
-        assert(false);
+        list_push_back(&job_list, &job_info_new(pid, job_running)->elem);
+        // wait until child process be queued
+        if (p_info->sync_mode == SYNC) {
+            while (job_list_find(pid));
+            puts("sync job finisihed");
+        }
+        else if (p_info->sync_mode == ASYNC) { // ASYNC
+            return;
+        }
+        else {
+            assert(false);
+        }
     }
 }
 
@@ -220,7 +222,7 @@ int process(
         bool pipe_out,
         int fd_in,
         int fd_out) {
-    
+
     struct process_info p_info = { 0 };
 
     process_init(

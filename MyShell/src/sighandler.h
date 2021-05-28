@@ -5,6 +5,12 @@
 #include "lib/commonlibs.h"
 #include "lib/sigsafelibs.h"
 
+#define job_running 0
+#define job_stopped 1
+#define job_killed  2
+
+#define COMMAND_NOT_FOUND 127
+
 typedef void handler_t(int);
 
 void shell_init_and_ignore();
