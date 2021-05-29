@@ -12,8 +12,6 @@
 #define ASYNC   true
 #define SYNC    false
 
-extern char** environ;
-
 int process(
         struct syntax_tree* node,
         bool sync_mode,

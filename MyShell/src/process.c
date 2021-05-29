@@ -1,66 +1,16 @@
 #include "process.h"
 
-
-struct job_info* job_info_new(pid_t pid, int state) {
-    struct job_info* job_info = malloc(sizeof(job_info));
-    job_info->pid = pid;
-    job_info->state = state;
-    return job_info;
+void allocate_string(char** arr, char* s) {
+    size_t len = strlen(s);
+    *arr = sigsafe_malloc(sizeof(char) * len);
+    strcpy(*arr, s);
 }
-
-void job_info_delete(struct list_elem* it) {
-    struct job_info* job_info = list_entry(it, struct job_info, elem);
-    free(job_info);
-}
-
-bool job_list_find(pid_t pid) {
-    struct list_elem* it;
-    for (   it = list_begin(&job_list);
-            it != list_end(&job_list);
-            it = list_next(it)
-        )
-    {
-        struct job_info* job_info = list_entry(it, struct job_info, elem);
-        if (job_info->pid == pid) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void job_list_update(pid_t pid, int state) {
-    printf("job list update | pid %d | state %d\n", pid, state);
-    struct list_elem* it;
-    for (   it = list_begin(&job_list);
-            it != list_end(&job_list);
-            it = list_next(it)
-        )
-    {
-        struct job_info* job_info = list_entry(it, struct job_info, elem);
-        printf("job_info->pid = %d\n", job_info->pid);
-        if (job_info->pid == pid) {
-            if (state == job_killed) {
-                list_remove(it);
-                puts("killed");
-                return;
-            }
-            else {
-                job_info->state = state;
-                return;
-            }
-        }
-    }
-   //  assert("job not in the list" && false);
-}
-
 void process_sigtstp_handler(int signum) {
     puts("sigtstp detected");
-    job_list_update(getpid(), job_stopped);
     SIGTSTP_DEFAULT_HANDLER(signum);
 }
 
 void process_sigcont_handler(int signum) {
-    job_list_update(getpid(), job_running);
     SIGCONT_DEFAULT_HANDLER(signum);
 }
 
@@ -81,6 +31,129 @@ void process_info_destory(struct process_info* p_info) {
         }
         free(p_info->argv);
     }
+}
+
+void process_jobs(int argc, char* argv[]) {
+    bool failed = false;
+    char** ps_argv = sigsafe_malloc(sizeof(char*) * 6);
+    
+    allocate_string(&ps_argv[0], "ps");
+    allocate_string(&ps_argv[1], "-o");
+    allocate_string(&ps_argv[2], "s,pid,cmd");
+    allocate_string(&ps_argv[3], "--ppid");
+    ps_argv[4] = malloc(sizeof(char) * 16);
+    sprintf(ps_argv[4], "%d", getpid());
+    ps_argv[5] = NULL;
+
+    pid_t ps_pid;
+    int fd[2];
+    int fd_stdout = dup(STDOUT_FILENO);
+    pipe(fd);
+    if ((ps_pid = fork()) == 0) {
+        close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);
+        if (execvp(ps_argv[0], ps_argv) == -1) {
+            perror("error occured while listing jobs");
+            _exit(-1);
+        }
+    }
+    else if (ps_pid > 0) {
+        int zero = 0;
+        char* buffer = NULL;
+        char status;
+        int ret;
+        int pid;
+        char cmd[128];
+        int cnt = 1;
+        waitpid(ps_pid, &ret, 0);
+        if (ret == 0) {
+            close(fd[1]);
+            FILE *ps_fp = fdopen(fd[0], "r");
+            bool skip = true;
+            while (getline(&buffer, &zero, ps_fp) > 0) {
+                if (skip) {
+                    skip = false;
+                }
+                else {
+                    sscanf(buffer, "%c %d %s", &status, &pid, cmd);
+                    if (pid == ps_pid) {
+                        continue;
+                    }
+                    printf("[%d] ", cnt++);
+                    switch (status) {
+                        case 'S':
+                        case 'D':
+                            printf("sleeping");
+                            break;
+                        case 'T':
+                            printf("stopped");
+                            break;
+                        case 't':
+                            printf("stopped while debugging");
+                        case 'R':
+                            printf("running");
+                            break;
+                        default:
+                            putchar(status);
+                    }
+                    printf(" %s\n", cmd);
+                }
+            }
+            free(buffer);
+            close(fd[0]);
+        }
+        else {
+            failed = true;
+        }
+    }
+    else {
+        failed = true;
+    }
+
+    if (failed) {
+        perror("error occured while listing jobs");
+    }
+    for (int i = 0; i < 5; i++) {
+        free(ps_argv[i]);
+    }
+    free(ps_argv);
+}
+
+void process_cont(int argc, char* argv[], bool sync_mode) {
+    char** kill_argv = sigsafe_malloc(sizeof(char*) * (argc + 2));
+    char buffer[16];
+    bool failed = false;
+
+    allocate_string(&kill_argv[0], "kill");
+    allocate_string(&kill_argv[1], "-18");
+    for (int i = 1; i < argc; i++) {
+        allocate_string(&kill_argv[i + 1], argv[i]);
+    }
+    kill_argv[argc + 1] = NULL;
+    pid_t pid = fork();
+    if (pid == 0) {
+        failed = (execvp(kill_argv[0], kill_argv) != -1);
+    }
+    else if (pid > 0) {
+        if (sync_mode == SYNC) {
+            waitpid(pid, NULL, 0);
+        }
+        else {
+            // ASYNC: do nothing...
+        }
+    }
+    else {
+        failed = true;
+    }
+
+    if (failed) {
+        perror("error occured while running bg");
+    }
+
+    for (int i = 0; i <= argc; i++) {
+        free(kill_argv[i]);
+    }
+    free(kill_argv);
 }
 
 int process_cd(int argc, char** argv) {
@@ -126,8 +199,9 @@ int process_init(
 
     node = syntax_tree;
     for (int i = 0; i < p_info->argc; i++) {
-        p_info->argv[i] = sigsafe_malloc(sizeof(char) * (strlen(node->data) + 1));
-        strcpy(p_info->argv[i], node->data);
+        allocate_string(&p_info->argv[i], node->data);
+        // p_info->argv[i] = sigsafe_malloc(sizeof(char) * strlen(node->data));
+        // strcpy(p_info->argv[i], node->data);
         node = node->right;
     }
 
@@ -152,15 +226,15 @@ void process_exec(struct process_info* p_info) {
         _exit(0);
     }
     if (MYSH_BUILT_IN("jobs")) {
-        jobs(p_info->argc, p_info->argv);
+        process_jobs(p_info->argc, p_info->argv);
         return;
     }
     if (MYSH_BUILT_IN("bg")) {
-        bg(p_info->argc, p_info->argv);
+        process_cont(p_info->argc, p_info->argv, ASYNC);
         return;
     }
     if (MYSH_BUILT_IN("fg")) {
-        fg(p_info->argc, p_info->argv);
+        process_cont(p_info->argc, p_info->argv, SYNC);
         return;
     }
 
@@ -168,9 +242,6 @@ void process_exec(struct process_info* p_info) {
 
     int fd_stdout = dup(STDIN_FILENO);
 
-    printf("job list before exec\n");
-    jobs(0, NULL);
-    
     if ((pid = fork()) == 0) {
         // restore sigint for child 
         shell_restore_sigint();
@@ -187,8 +258,13 @@ void process_exec(struct process_info* p_info) {
         if (p_info->pipe_out) {
             dup2(p_info->fd_out, STDOUT_FILENO);
         }
-        
-        if (execve(p_info->argv[0], p_info->argv, environ) == -1) {
+
+        puts("argv");
+        for (int i = 0; i < p_info->argc; i++) {
+            puts(p_info->argv[i]);
+        }
+
+        if (execvp(p_info->argv[0], p_info->argv) == -1) {
             dup2(fd_stdout, STDOUT_FILENO);
             printf("Command '%s' not found.\n", p_info->argv[0]);
             _exit(COMMAND_NOT_FOUND);
@@ -200,10 +276,9 @@ void process_exec(struct process_info* p_info) {
         return;
     } 
     else {
-        list_push_back(&job_list, &job_info_new(pid, job_running)->elem);
         // wait until child process be queued
         if (p_info->sync_mode == SYNC) {
-            while (job_list_find(pid));
+
             puts("sync job finisihed");
         }
         else if (p_info->sync_mode == ASYNC) { // ASYNC

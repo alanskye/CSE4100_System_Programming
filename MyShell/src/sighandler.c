@@ -38,7 +38,6 @@ void shell_sigchld_handler(int signum) {
     pid_t pid;
     int status;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        job_list_update(pid, job_killed);
         if (status != COMMAND_NOT_FOUND) {
             printf("Process [%06d] terminated with exit code %d\n", pid, status);
         }
