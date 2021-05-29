@@ -1,19 +1,26 @@
 #include "sighandler.h"
 
+handler_t* SIGINT_DEFAULT_HANDLER;
+handler_t* SIGTSTP_DEFAULT_HANDLER;
+handler_t* SIGCHLD_DEFAULT_HANDLER;
 
-void shell_sigchld_handler(int signum) {
+void shell_signal_handler(int signum) {
     pid_t pid;
     int status;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0);
+    switch (signum) {
+        case SIGCHLD:
+            while ((pid = waitpid(-1, &status, WNOHANG)) > 0);
+            break;
+        case SIGINT: // do nothing
+        case SIGTSTP:
+            break;
+    }
 }
 
-void shell_init_and_ignore() {
-    Signal(SIGINT, SIG_IGN);
-    Signal(SIGTSTP, SIG_IGN);
-}
-
-void shell_activate_reaper() {
-    Signal(SIGCHLD, shell_sigchld_handler);
+void shell_init_sighandlers() {
+    SIGINT_DEFAULT_HANDLER = Signal(SIGINT, shell_signal_handler);
+    SIGTSTP_DEFAULT_HANDLER = Signal(SIGTSTP, shell_signal_handler);
+    SIGCHLD_DEFAULT_HANDLER = Signal(SIGCHLD, shell_signal_handler);
 }
 
 void shell_restore_sigint() {

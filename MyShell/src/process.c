@@ -108,7 +108,7 @@ void process_jobs(int mode, int target) {
                         if (cnt == target) {
                             kill(pid, SIGCONT);
                             bgfg_done = true;
-                            waitpid(pid, NULL, 0);
+                            waitpid(pid, NULL, WUNTRACED);
                         } 
                         break;
                     }
@@ -265,7 +265,7 @@ void process_exec(struct process_info* p_info) {
         shell_restore_sigint();
         shell_restore_sigtstp();
 
-        printf("exec child pid = %d\n", getpid());
+        // printf("exec child pid = %d\n", getpid());
         if (p_info->sync_mode == ASYNC) {
             //...
         }
@@ -275,11 +275,6 @@ void process_exec(struct process_info* p_info) {
         }
         if (p_info->pipe_out) {
             dup2(p_info->fd_out, STDOUT_FILENO);
-        }
-
-        puts("argv");
-        for (int i = 0; i < p_info->argc; i++) {
-            puts(p_info->argv[i]);
         }
 
         if (execvp(p_info->argv[0], p_info->argv) == -1) {
@@ -296,8 +291,7 @@ void process_exec(struct process_info* p_info) {
     else {
         // wait until child process be queued
         if (p_info->sync_mode == SYNC) {
-
-            puts("sync job finisihed");
+            waitpid(pid, NULL, WUNTRACED);
         }
         else if (p_info->sync_mode == ASYNC) { // ASYNC
             return;

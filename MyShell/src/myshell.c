@@ -6,15 +6,15 @@ static void free_resources(char*, struct list*, struct syntax_tree*);
 
 int main() {
     // TODO: ignore CTRL+C
-    
-    shell_init_and_ignore();
-    shell_activate_reaper();
+    shell_init_sighandlers();
 
     while (true) {
         char* cmd_buffer = NULL;
         struct list* token_list = NULL;
         struct syntax_tree* syntax_tree = NULL;
         
+        printf("CSE4100-SP-P4 > ");
+
         // TODO: read a line
         rewind(stdin);
         int cmd_len = read_command(&cmd_buffer);
@@ -64,7 +64,8 @@ static int read_command(char** cmd_buffer) {
         }
     }
     if (feof(stdin)) {
-        exit(0);
+        putchar('\n');
+        _exit(0);
     }
     return (int)read_len;
 }

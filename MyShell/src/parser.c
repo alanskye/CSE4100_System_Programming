@@ -144,7 +144,7 @@ struct syntax_tree* cmd_list_3() {
 
     result = syntax_tree_new(NULL, SYNTAX_TREE_BCKGRD);
     syntax_tree_merge(result, job, cmd_list);
-    puts("cmd_list_3!");
+    // puts("cmd_list_3!");
     return result;
 }
 
@@ -175,7 +175,7 @@ struct syntax_tree* job_2() {       // <command> '|' <job>
         syntax_tree_delete(cmd);
         return NULL;
     }
-    puts("PIPE DETECTED");
+    // puts("PIPE DETECTED");
     // print_token(list_entry(glob_token_elem, struct token, elem));
 
     if ((job = job_selector()) == NULL) {
@@ -183,7 +183,7 @@ struct syntax_tree* job_2() {       // <command> '|' <job>
         return NULL;
     }
 
-    puts("pipe and job detected");
+    // puts("pipe and job detected");
     result = syntax_tree_new(NULL, SYNTAX_TREE_PIPE);
     syntax_tree_merge(result, cmd, job);
 

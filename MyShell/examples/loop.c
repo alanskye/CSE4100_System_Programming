@@ -1,5 +1,7 @@
+#include <stdio.h>
+
 int main() {
-    printf("infloop gogo\n");
+    puts("while (1)");
     while (1);
     return 0;
 }
