@@ -1,7 +1,5 @@
 #include "myshell.h"
 
-struct list job_list;
-
 // prototypes
 static int read_command(char**);
 static void free_resources(char*, struct list*, struct syntax_tree*);
@@ -32,7 +30,7 @@ int main() {
             continue;
         }
         else {
-            show_tokens(token_list);
+            // show_tokens(token_list);
         }
 
         // TODO: build a parse tree
@@ -41,7 +39,7 @@ int main() {
             continue;
         }
 
-        syntax_tree_traverse(syntax_tree);
+        // syntax_tree_traverse(syntax_tree);
         
         // TODO: execute over the tree
         execute(syntax_tree);
@@ -76,15 +74,14 @@ static int read_command(char** cmd_buffer) {
 static void free_resources(
         char* cmd_buffer, 
         struct list* token_list, 
-        struct syntax_tree* syntax_tree) {
-
+        struct syntax_tree* syntax_tree) 
+{
         if (cmd_buffer != NULL) {
             free(cmd_buffer);
         }
         if (token_list != NULL) {
             destroy_token_list(token_list);
         }
-
         if (syntax_tree != NULL) {
             syntax_tree_delete(syntax_tree);
         }

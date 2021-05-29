@@ -1,19 +1,5 @@
 #include "process.h"
 
-void allocate_string(char** arr, char* s) {
-    size_t len = strlen(s);
-    *arr = sigsafe_malloc(sizeof(char) * len);
-    strcpy(*arr, s);
-}
-void process_sigtstp_handler(int signum) {
-    puts("sigtstp detected");
-    SIGTSTP_DEFAULT_HANDLER(signum);
-}
-
-void process_sigcont_handler(int signum) {
-    SIGCONT_DEFAULT_HANDLER(signum);
-}
-
 struct process_info {
     int argc;
     char** argv;
@@ -24,6 +10,13 @@ struct process_info {
     int fd_out;
 };
 
+void allocate_string(char** arr, char* s) {
+    size_t len = strlen(s);
+    *arr = sigsafe_malloc(sizeof(char) * len);
+    strcpy(*arr, s);
+}
+
+
 void process_info_destory(struct process_info* p_info) {
     if (p_info->argv != NULL) {
         for (int i = 0; i < p_info->argc; i++) {
@@ -33,10 +26,11 @@ void process_info_destory(struct process_info* p_info) {
     }
 }
 
-void process_jobs(int argc, char* argv[]) {
+void process_jobs(int mode, int target) {
+    bool bgfg_done = false;
     bool failed = false;
     char** ps_argv = sigsafe_malloc(sizeof(char*) * 6);
-    
+
     allocate_string(&ps_argv[0], "ps");
     allocate_string(&ps_argv[1], "-o");
     allocate_string(&ps_argv[2], "s,pid,cmd");
@@ -53,12 +47,13 @@ void process_jobs(int argc, char* argv[]) {
         close(fd[0]);
         dup2(fd[1], STDOUT_FILENO);
         if (execvp(ps_argv[0], ps_argv) == -1) {
+            dup2(fd_stdout, STDOUT_FILENO);
             perror("error occured while listing jobs");
             _exit(-1);
         }
     }
     else if (ps_pid > 0) {
-        int zero = 0;
+        size_t zero = 0;
         char* buffer = NULL;
         char status;
         int ret;
@@ -79,24 +74,52 @@ void process_jobs(int argc, char* argv[]) {
                     if (pid == ps_pid) {
                         continue;
                     }
-                    printf("[%d] ", cnt++);
-                    switch (status) {
-                        case 'S':
-                        case 'D':
-                            printf("sleeping");
-                            break;
-                        case 'T':
-                            printf("stopped");
-                            break;
-                        case 't':
-                            printf("stopped while debugging");
-                        case 'R':
-                            printf("running");
-                            break;
-                        default:
-                            putchar(status);
+
+                    if (mode == 0) { // jobs
+                        printf("[%d] ", cnt);
+                        switch (status) {
+                            case 'S':
+                            case 'D':
+                                printf("sleeping");
+                                break;
+                            case 'T':
+                                printf("stopped");
+                                break;
+                            case 't':
+                                printf("stopped while debugging");
+                            case 'R':
+                                printf("running");
+                                break;
+                            case 'Z':
+                                printf("<defunct>");
+                            default:
+                                putchar(status);
+                        }
+                        printf("\t%s\n", cmd);
                     }
-                    printf(" %s\n", cmd);
+                    else if (mode == 1) { // bg
+                        if (cnt == target) {
+                            kill(pid, SIGCONT);
+                            bgfg_done = true;
+                        }
+                        break;
+                    }
+                    else if (mode == 2) { // fg
+                        if (cnt == target) {
+                            kill(pid, SIGCONT);
+                            bgfg_done = true;
+                            waitpid(pid, NULL, 0);
+                        } 
+                        break;
+                    }
+                    else if (mode == 3) { // kill
+                        if (cnt == target) {
+                            kill(pid, SIGKILL);
+                            bgfg_done = true;
+                        }
+                        break;
+                    }
+                    cnt++;
                 }
             }
             free(buffer);
@@ -110,6 +133,10 @@ void process_jobs(int argc, char* argv[]) {
         failed = true;
     }
 
+    if (mode != 0 && bgfg_done == false) {
+        printf("[job %%%d not exists]\n", target);
+    }
+
     if (failed) {
         perror("error occured while listing jobs");
     }
@@ -119,42 +146,30 @@ void process_jobs(int argc, char* argv[]) {
     free(ps_argv);
 }
 
-void process_cont(int argc, char* argv[], bool sync_mode) {
-    char** kill_argv = sigsafe_malloc(sizeof(char*) * (argc + 2));
-    char buffer[16];
-    bool failed = false;
-
-    allocate_string(&kill_argv[0], "kill");
-    allocate_string(&kill_argv[1], "-18");
-    for (int i = 1; i < argc; i++) {
-        allocate_string(&kill_argv[i + 1], argv[i]);
+int process_cont(int argc, char* argv[], int mode) {
+    int target = 1;
+    if (argc == 1) {
+        process_jobs(mode, target);
     }
-    kill_argv[argc + 1] = NULL;
-    pid_t pid = fork();
-    if (pid == 0) {
-        failed = (execvp(kill_argv[0], kill_argv) != -1);
-    }
-    else if (pid > 0) {
-        if (sync_mode == SYNC) {
-            waitpid(pid, NULL, 0);
-        }
-        else {
-            // ASYNC: do nothing...
-        }
+    else if ((argc == 2 || argc == 3) && sscanf(argv[1], "%%%d\n", &target) == 1) {
+        process_jobs(mode, target);
     }
     else {
-        failed = true;
+        if (mode == 1) {
+            printf("bg: ");
+        }
+        else if (mode == 2) {
+            printf("fg: ");
+        }
+        else {
+            printf("kill (MyShell implemented): ");
+        }
+        printf("invalid arguments!\n");
+        return -1;
     }
-
-    if (failed) {
-        perror("error occured while running bg");
-    }
-
-    for (int i = 0; i <= argc; i++) {
-        free(kill_argv[i]);
-    }
-    free(kill_argv);
+    return 0;
 }
+
 
 int process_cd(int argc, char** argv) {
     if (argc == 1) {
@@ -226,18 +241,21 @@ void process_exec(struct process_info* p_info) {
         _exit(0);
     }
     if (MYSH_BUILT_IN("jobs")) {
-        process_jobs(p_info->argc, p_info->argv);
+        process_jobs(0, 0);
         return;
     }
     if (MYSH_BUILT_IN("bg")) {
-        process_cont(p_info->argc, p_info->argv, ASYNC);
+        process_cont(p_info->argc, p_info->argv, 1);
         return;
     }
     if (MYSH_BUILT_IN("fg")) {
-        process_cont(p_info->argc, p_info->argv, SYNC);
+        process_cont(p_info->argc, p_info->argv, 2);
         return;
     }
-
+    if (MYSH_BUILT_IN("kill")) {
+        process_cont(p_info->argc, p_info->argv, 3);
+        return;
+    }
     pid_t pid;
 
     int fd_stdout = dup(STDIN_FILENO);
@@ -246,7 +264,7 @@ void process_exec(struct process_info* p_info) {
         // restore sigint for child 
         shell_restore_sigint();
         shell_restore_sigtstp();
-        shell_restore_sigcont();
+
         printf("exec child pid = %d\n", getpid());
         if (p_info->sync_mode == ASYNC) {
             //...
@@ -267,7 +285,7 @@ void process_exec(struct process_info* p_info) {
         if (execvp(p_info->argv[0], p_info->argv) == -1) {
             dup2(fd_stdout, STDOUT_FILENO);
             printf("Command '%s' not found.\n", p_info->argv[0]);
-            _exit(COMMAND_NOT_FOUND);
+            _exit(127);
         }
 
     }
@@ -290,7 +308,7 @@ void process_exec(struct process_info* p_info) {
     }
 }
 
-int process(
+void process(
         struct syntax_tree* syntax_tree,
         bool sync_mode,
         bool pipe_in,

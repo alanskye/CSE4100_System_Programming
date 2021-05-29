@@ -8,12 +8,6 @@ static struct token* token_new(char* word, int type) {
     return token;
 }
 
-static void token_free(struct token* token) {
-    assert (token != NULL);
-    free(token->word);
-    free(token);
-}
-
 static void token_replace(struct token* token, char *word, int type) {
     free(token->word);
     token->word = sigsafe_malloc(sizeof(char) * (strlen(word) + 1));
@@ -22,7 +16,7 @@ static void token_replace(struct token* token, char *word, int type) {
 }
 
 static void token_remove_quotes(struct token* token) {
-    printf("before trim = %s\n", token->word);
+    // printf("before trim = %s\n", token->word);
     int word_len = strlen(token->word);
     char qtype = CHAR_NULL;
     int temp_idx = 0;
@@ -40,7 +34,7 @@ static void token_remove_quotes(struct token* token) {
     }
     token->word[temp_idx++] = CHAR_NULL;
     token->word = sigsafe_realloc(token->word, sizeof(char) * temp_idx);
-    printf("after trim = %s\n", token->word);
+    // printf("after trim = %s\n", token->word);
 }
 
 static void clear_buffer(char* word, int* idx) {
@@ -122,13 +116,13 @@ int tokenize(const char cmd_buffer[], const int cmd_len, struct list* token_list
         }
 
         if (ch == CHAR_NULL) {
-            printf("cmd len = %d, cmd_idx = %d, word idx = %d, %d\n", cmd_len, cmd_idx, word_idx, word_buffer[1]);
-            printf("before the end, size = %zu\n", list_size(token_list));
+            //printf("cmd len = %d, cmd_idx = %d, word idx = %d, %d\n", cmd_len, cmd_idx, word_idx, word_buffer[1]);
+            //printf("before the end, size = %zu\n", list_size(token_list));
             if (word_idx > 0) {
                 list_push_back(token_list, &token_new(word_buffer, TOKEN_WORD)->elem);
                 clear_buffer(word_buffer, &word_idx);
             }
-            printf("after the end, size = %zu\n", list_size(token_list));
+            //printf("after the end, size = %zu\n", list_size(token_list));
         }
 
         cmd_idx++;
@@ -162,7 +156,7 @@ int tokenize(const char cmd_buffer[], const int cmd_len, struct list* token_list
 }
 
 void print_token(struct token* token) {
-    printf("token->word's len = %d\n", strlen(token->word));
+    printf("token->word's len = %zu\n", strlen(token->word));
     printf("token->word: %s\n", token->word);
     printf("token->type: %d\n", token->type);
 }

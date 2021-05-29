@@ -12,7 +12,7 @@
 #define ASYNC   true
 #define SYNC    false
 
-int process(
+void process(
         struct syntax_tree* node,
         bool sync_mode,
         bool pipe_in,
