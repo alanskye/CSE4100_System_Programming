@@ -2,9 +2,9 @@
 
 struct syntax_tree* syntax_tree_new( 
         char* data,  
-        enum syntax_tree_type type) {
-    struct syntax_tree* syntax_tree = 
-        sigsafe_malloc(sizeof(struct syntax_tree));
+        enum syntax_tree_type type) 
+{
+    struct syntax_tree* syntax_tree = sigsafe_malloc(sizeof(struct syntax_tree));
     syntax_tree->type = type;
     if (data != NULL) {
         syntax_tree->data = sigsafe_malloc(sizeof(char) * (strlen(data) + 1));
@@ -18,7 +18,6 @@ struct syntax_tree* syntax_tree_new(
     return syntax_tree;
 }
 
-
 void syntax_tree_merge(
         struct syntax_tree* root,
         struct syntax_tree* left,
@@ -27,7 +26,6 @@ void syntax_tree_merge(
     root->left = left;
     root->right = right;
 }
-
 
 void syntax_tree_delete(struct syntax_tree* root) {
     if (root == NULL) {
@@ -40,7 +38,6 @@ void syntax_tree_delete(struct syntax_tree* root) {
     syntax_tree_delete(root->right);
     free(root);
 }
-
 
 void syntax_tree_traverse(struct syntax_tree* root) {
     if (root == NULL) {

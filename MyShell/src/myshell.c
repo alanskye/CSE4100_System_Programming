@@ -3,9 +3,10 @@
 // prototypes
 static int read_command(char**);
 static void free_resources(char*, struct list*, struct syntax_tree*);
+static void refresh_shell();
 
 int main() {
-    // TODO: ignore CTRL+C
+
     shell_init_sighandlers();
 
     while (true) {
@@ -13,40 +14,32 @@ int main() {
         struct list* token_list = NULL;
         struct syntax_tree* syntax_tree = NULL;
         
+        refresh_shell();
+
         printf("CSE4100-SP-P4 > ");
 
-        // TODO: read a line
-        rewind(stdin);
         int cmd_len = read_command(&cmd_buffer);
         if (cmd_len == 0) {
+            free_resources(cmd_buffer, token_list, syntax_tree);
             continue;
         }
 
-        // TODO: tokenzie the given line
-        token_list = malloc(sizeof(struct list));
+        token_list = sigsafe_malloc(sizeof(struct list));
         tokenize(cmd_buffer, cmd_len, token_list);
         if (list_size(token_list) == 0) {
             free_resources(cmd_buffer, token_list, syntax_tree);
             continue;
-        }
-        else {
-            // show_tokens(token_list);
-        }
+        } 
 
-        // TODO: build a parse tree
         if (parse(token_list, &syntax_tree) != 0) {
             free_resources(cmd_buffer, token_list, syntax_tree);
             continue;
         }
 
-        // syntax_tree_traverse(syntax_tree);
-        
-        // TODO: execute over the tree
         execute(syntax_tree);
-        // TODO: clear the resources
-
+        free_resources(cmd_buffer, token_list, syntax_tree);
     }
-    return -1;
+    return 0;
 }
 
 static int read_command(char** cmd_buffer) {
@@ -86,5 +79,28 @@ static void free_resources(
         if (syntax_tree != NULL) {
             syntax_tree_delete(syntax_tree);
         }
+}
+
+static void refresh_shell() {
+    rewind(stdin);
+    char** argv = sigsafe_malloc(sizeof(char*) * 2);
+    argv[0] = malloc(sizeof(char) * sizeof("stty"));
+    strcpy(argv[0], "stty");
+    argv[1] = malloc(sizeof(char) * sizeof("sane"));
+    strcpy(argv[1], "sane");
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(argv[0], argv);
+    }
+    else if (pid > 0) {
+        waitpid(pid, NULL, 0);
+    }
+    else {
+        puts("[myshell has failed to refresh the shell]");
+        return;
+    }
+    free(argv[0]);
+    free(argv[1]);
+    free(argv);
 }
 
