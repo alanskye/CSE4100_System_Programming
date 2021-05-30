@@ -5,9 +5,9 @@
 
 ## MyShell
 
-myshell simulates unix shell with system calls and signal handling. 
-It can run jobs with pipe ``|`` and background ``&`` options
-
+myshell simulates unix shell with system calls and signal handling
+It can run jobs with pipe ``|`` and background ``&`` options like  
+`` examples/loop & cat src/*.c | grep -v "return" | sort -r ``  
 | directory      |                  |
 | -------------- |:----------------:|
 | Makefile       | project Makefile |
@@ -19,7 +19,7 @@ It can run jobs with pipe ``|`` and background ``&`` options
   
 ## How to Build
 
-``$ make`` compiles \*.c under ./build/ and generates an executable file <em>myshell</em>.  
+``$ make`` compiles \*.c under ./build/ and generates an executable file <em>myshell</em>  
 
 ``$ make clean`` removes <em>myshell</em> and remove ./build
 
