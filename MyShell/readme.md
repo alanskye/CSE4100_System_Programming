@@ -1,16 +1,18 @@
+
+<!-- https://github.com/alanskye/CSE4100-System_Programming/tree/main/Myshell -->
+
 # CSE4100-System-Programmnig Project 4
 
-**20181677 TaeHan Lee**
-
-20181677.docx   : report  
-Makefile        : project Makefile  
-src/            : source codes  
-build/          : build directory  
-examples/       : test programs for myshell  
-examples/loop   : while (1);  
-examples/sleep  : sleep(120);  
-          
-## How to Build:
+| directory      |                  |
+| -------------- |:----------------:|
+| Makefile       | project Makefile |
+| src/           | source codes     |
+| build/         | build directory  |
+| examples/      | test programs    |
+| examples/loop  | infinite loop    |
+| examples/sleep | sleep for 120s   |
+  
+## How to Build
 
 ``$ make`` compiles \*.c under ./build/ and generates an executable file <em>myshell</em>.  
 
