@@ -10,7 +10,7 @@ It can run jobs with pipe ``|`` and background ``&`` options like
 `` examples/loop & cat src/*.c | grep -v "return" | sort -r ``  
 
 | directory         |                           |
-| ----------------- |:-------------------------:|
+| :---------------- |:------------------------- |
 | Makefile          | project Makefile          |
 | src/myshell.c     | main program (shell)      |
 | src/token.c       | tokenize the command      |
