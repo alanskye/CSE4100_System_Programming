@@ -3,6 +3,11 @@
 
 # CSE4100-System-Programmnig Project 4
 
+## MyShell
+
+myshell simulates unix shell with system calls and signal handling. 
+It can run jobs with pipe ``|`` and background ``&`` options
+
 | directory      |                  |
 | -------------- |:----------------:|
 | Makefile       | project Makefile |
