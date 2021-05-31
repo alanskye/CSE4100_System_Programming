@@ -83,14 +83,17 @@ static void free_resources(
 
 static void refresh_shell() {
     rewind(stdin);
-    char** argv = sigsafe_malloc(sizeof(char*) * 2);
+    char** argv = sigsafe_malloc(sizeof(char*) * 3);
     argv[0] = malloc(sizeof(char) * sizeof("stty"));
     strcpy(argv[0], "stty");
     argv[1] = malloc(sizeof(char) * sizeof("sane"));
     strcpy(argv[1], "sane");
+    argv[2] = NULL;
     pid_t pid = fork();
     if (pid == 0) {
-        execvp(argv[0], argv);
+        if (execvp(argv[0], argv) == -1) {
+            printf("\nfailed to refersh shell\n");
+        }
     }
     else if (pid > 0) {
         waitpid(pid, NULL, 0);

@@ -215,8 +215,6 @@ int process_init(
     node = syntax_tree;
     for (int i = 0; i < p_info->argc; i++) {
         allocate_string(&p_info->argv[i], node->data);
-        // p_info->argv[i] = sigsafe_malloc(sizeof(char) * strlen(node->data));
-        // strcpy(p_info->argv[i], node->data);
         node = node->right;
     }
 
@@ -265,7 +263,6 @@ void process_exec(struct process_info* p_info) {
         shell_restore_sigint();
         shell_restore_sigtstp();
 
-        // printf("exec child pid = %d\n", getpid());
         if (p_info->sync_mode == ASYNC) {
             //...
         }
