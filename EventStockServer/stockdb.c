@@ -125,7 +125,7 @@ static stock_t* stock_search(bst_node_t* self, int id) {
         return stock_search(self->left, id);
     }
     else if (id == stock->id) {
-        return self;
+        return stock;
     }
     else {
         return stock_search(self->right, id);
