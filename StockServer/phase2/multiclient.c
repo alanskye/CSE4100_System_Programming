@@ -3,7 +3,7 @@
 
 #define MAX_CLIENT 256
 #define ORDER_PER_CLIENT 10
-#define STOCK_NUM 1024
+#define STOCK_NUM 32
 #define BUY_SELL_MAX 10
 
 int main(int argc, char **argv) 
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
                 }
                 Rio_readnb(&rio, buf, msglen);
                 buf[msglen] = '\0';
-                // Fputs(buf, stdout);
+                Fputs(buf, stdout);
                 // usleep(1000000);
             }
 
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
 
     end = clock();
 
-    printf("cpu_time = %ld\n", end - start);
+    printf("cpu_clock = %ld\n", end - start);
     /*clientfd = Open_clientfd(host, port);
       Rio_readinitb(&rio, clientfd);
 

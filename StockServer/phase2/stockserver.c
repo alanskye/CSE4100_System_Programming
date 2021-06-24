@@ -14,7 +14,6 @@ typedef struct conn_info {
 } conn_info_t;
 
 
-void echo(int connfd);
 void readcommand(int);
 
 void* server_thread(void *vargp);
@@ -43,17 +42,18 @@ int main(int argc, char **argv)
     printf("Press Ctrl+Z to quit the server and store stock.txt\n");
 
     // TODO: load stock.txt
-    stockdb_load(); // test
+    stockdb_load();
 
     listenfd = Open_listenfd(argv[1]);
     while (1) {
+        // allocation for new thread
         clientlen = sizeof(struct sockaddr_storage);
         conn_info = Malloc(sizeof(conn_info_t));
+        // blocking system call
         conn_info->connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, conn_info->client_hostname, CONNINFOMAX, conn_info->client_port, CONNINFOMAX, 0);
+        // create a new thread for the client
         Pthread_create(&tid, NULL, server_thread, conn_info);
-        // printf("Connected to (%s, %s)\n", client_hostname, client_port);
-        // echo(connfd);
     }
     puts("end");
     exit(0);
@@ -101,9 +101,9 @@ void readcommand(int connfd)
     Rio_readinitb(&rio, connfd);
     while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0) {
         buf_next = buf;
-        // printf("server received %d bytes\n", n);
+
         sscanf(buf, "%s %d %d", command, &id, &cnt);
-        // printf("command = %s\n", command);
+
         if (strcmp("show", command) == 0) {
             show(&buf_next);
         }
@@ -116,47 +116,24 @@ void readcommand(int connfd)
         else if (strcmp("exit", command) == 0) {
             msglen = -1;
             sprintf(msglen_text, "%d\n", msglen);
-            // printf("msglen_text: %s\n", msglen_text);
+            
             Rio_writen(connfd, msglen_text, strlen(msglen_text));
             break;
         }
-        else {
-
-        }
         msglen = strlen(buf);
         sprintf(msglen_text, "%d\n", msglen);
-        // printf("msglen sent: %d\n", msglen);
-        // printf("msglen_text: %s\n", msglen_text);
         Rio_writen(connfd, msglen_text, strlen(msglen_text));
         Rio_writen(connfd, buf, msglen);
-        // puts("server write end, content sent: ");
-        // puts(buf);
-        // puts("---");
     }
 }
 
 void* server_thread(void* vargp) {
     conn_info_t conn_info;
     memcpy(&conn_info, (conn_info_t*)vargp, sizeof(conn_info_t));
+    // set automatic resource free
     Pthread_detach(pthread_self());
     Free(vargp);
     readcommand(conn_info.connfd);
-    // printf("Connection Closed (%s %s)\n", conn_info.client_hostname, conn_info.client_port);
     Close(conn_info.connfd);
     return NULL;
-}
-
-/* $end echo */
-
-void echo(int connfd) 
-{
-    int n; 
-    char buf[MAXLINE]; 
-    rio_t rio;
-
-    Rio_readinitb(&rio, connfd);
-    while((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0) {
-        // printf("server received %d bytes\n", n);
-        Rio_writen(connfd, buf, n);
-    }
 }

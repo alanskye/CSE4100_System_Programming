@@ -8,12 +8,12 @@
 #define CONNINFOMAX 1024
 
 typedef struct {
-    int maxfd;
+    int maxfd; // maximum fd in read set
     fd_set read_set;
     fd_set ready_set;
-    int cnt_ready;
-    int maxi;
-    int clientfd[FD_SETSIZE];
+    int cnt_ready; // number of ready fds
+    int maxi; 
+    int clientfd[FD_SETSIZE]; // inactive fd == -1, else, active
     rio_t clientrio[FD_SETSIZE];
 } pool;
 
@@ -25,6 +25,7 @@ void show(char** buf_next);
 void sell(char** buf_next, int id, int cnt);
 void buy(char** buf_next, int id, int cnt);
 
+// signal handler for ctrl + z
 void sigtstp_handler(int signum) {
     printf("\n=== storing stockdb.txt ===\n");
     stockdb_save();
@@ -51,17 +52,19 @@ int main(int argc, char **argv)
     stockdb_load(); // test
 
     listenfd = Open_listenfd(argv[1]);
+    
     init_pool(listenfd, &pool);
 
     while (1) {
         pool.ready_set = pool.read_set;
         pool.cnt_ready = Select(pool.maxfd + 1, &pool.ready_set, NULL, NULL, NULL);
-
+        // non blocking connection accept
         if (FD_ISSET(listenfd, &pool.ready_set)) {
             clientlen = sizeof(struct sockaddr_storage);
             connfd = Accept(listenfd, (SA*)&clientaddr, &clientlen);
             add_client(connfd, &pool);
         }
+        // iterate over fd array
         check_clients(&pool);
     }
 
@@ -70,6 +73,7 @@ int main(int argc, char **argv)
 /* $end echoserverimain */
 
 void init_pool(int listenfd, pool* p) {
+    // initialize client fd array
     p->maxi = -1;
     for (int i = 0; i < FD_SETSIZE; i++) {
         p->clientfd[i] = -1;
@@ -115,14 +119,14 @@ void check_clients(pool* p) {
         connfd = p->clientfd[i];
         rio = p->clientrio[i];
 
+        // there is pending request
         if ((connfd > 0) && (FD_ISSET(connfd, &p->ready_set))) {
             p->cnt_ready--;
 
             if ((n = Rio_readlineb(&rio, buf, MAXLINE)) != 0) {
                 buf_next = buf;
-                // printf("server received %d bytes\n", n);
                 sscanf(buf, "%s %d %d", command, &id, &cnt);
-                // printf("command = %s\n", command);
+                // check user request
                 if (strcmp("show", command) == 0) {
                     show(&buf_next);
                 }
@@ -135,21 +139,17 @@ void check_clients(pool* p) {
                 else if (strcmp("exit", command) == 0) {
                     msglen = -1;
                     sprintf(msglen_text, "%d\n", msglen);
-                    // printf("msglen_text: %s\n", msglen_text);
                     Rio_writen(connfd, msglen_text, strlen(msglen_text));
                     break;
                 }
+                // send message length
                 msglen = strlen(buf);
                 sprintf(msglen_text, "%d\n", msglen);
-                // printf("msglen sent: %d\n", msglen);
-                // printf("msglen_text: %s\n", msglen_text);
                 Rio_writen(connfd, msglen_text, strlen(msglen_text));
-                Rio_writen(connfd, buf, msglen);
-                // puts("server write end, content sent: ");
-                // puts(buf);
-                // puts("---");
+                // send message (buffer)
+                Rio_writen(connfd, buf, msglen); 
             }
-            else { // EOF detected
+            else { // EOF detected (connection tear down)
                 Close(connfd);
                 FD_CLR(connfd, &p->read_set);
                 p->clientfd[i] = -1;

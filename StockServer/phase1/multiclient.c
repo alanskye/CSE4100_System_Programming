@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     int runprocess = 0, status, i;
     int msglen;
     int clientfd, num_client;
-    char *host, *port, buf[MAXLINE], tmp[3];
+    char *host, *port, buf[MAXLINE], tmp[8];
     rio_t rio;
 
     if (argc != 4) {

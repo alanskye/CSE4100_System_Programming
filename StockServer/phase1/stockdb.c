@@ -46,6 +46,7 @@ void stockdb_save() {
     FILE *fp = Fopen("stock.txt", "w");
     stockdb_save2(stockdb->root, fp);
     Fclose(fp);
+    printf("server quit\n");
     exit(0);
 }
 

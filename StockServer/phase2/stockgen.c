@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define N 1024
+#define N 32
 
 int main() {
     FILE* fp = fopen("stock.txt", "w");
