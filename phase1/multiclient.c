@@ -3,11 +3,13 @@
 
 #define MAX_CLIENT 100
 #define ORDER_PER_CLIENT 10
-#define STOCK_NUM 5
+#define STOCK_NUM 32
 #define BUY_SELL_MAX 10
 
 int main(int argc, char **argv) 
 {
+    clock_t start, end;
+
     pid_t pids[MAX_CLIENT];
     int runprocess = 0, status, i;
     int msglen;
@@ -23,6 +25,8 @@ int main(int argc, char **argv)
     host = argv[1];
     port = argv[2];
     num_client = atoi(argv[3]);
+    
+    start = clock();
 
     /*	fork for each client process	*/
     while(runprocess < num_client){
@@ -79,7 +83,7 @@ int main(int argc, char **argv)
                 Rio_readnb(&rio, buf, msglen);
                 buf[msglen] = '\0';
                 Fputs(buf, stdout);
-                usleep(1000000);
+                // usleep(1000000);
             }
 
             Close(clientfd);
@@ -97,7 +101,10 @@ int main(int argc, char **argv)
         waitpid(pids[i], &status, 0);
     }
 
+    end = clock();
 
+    double cpu_time = ((double)(end - start)) / CLOCKS_PER_SEC;
+    printf("cpu_time = %lf\n", cpu_time);
     /*clientfd = Open_clientfd(host, port);
       Rio_readinitb(&rio, clientfd);
 
@@ -109,6 +116,7 @@ int main(int argc, char **argv)
 
       Close(clientfd); //line:netp:echoclient:close
       exit(0);*/
+
 
     return 0;
 }

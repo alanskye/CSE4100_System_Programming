@@ -139,7 +139,9 @@ static void stockdb_save2(bst_node_t* self, FILE* fp) {
     }
     stockdb_save2(self->left, fp);
     stock = bst_node_entry(self, stock_t, bst_node);
+    P(&stock->mutex);
     fprintf(fp, "%d %d %d\n", stock->id, stock->cnt, stock->price); 
+    V(&stock->mutex);
     stockdb_save2(self->right, fp);
 }
 

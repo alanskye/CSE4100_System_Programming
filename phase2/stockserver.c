@@ -52,10 +52,10 @@ int main(int argc, char **argv)
         conn_info->connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, conn_info->client_hostname, CONNINFOMAX, conn_info->client_port, CONNINFOMAX, 0);
         Pthread_create(&tid, NULL, server_thread, conn_info);
-
-        //printf("Connected to (%s, %s)\n", client_hostname, client_port);
+        // printf("Connected to (%s, %s)\n", client_hostname, client_port);
         // echo(connfd);
     }
+    puts("end");
     exit(0);
 }
 /* $end echoserverimain */

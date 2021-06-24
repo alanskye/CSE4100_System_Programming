@@ -1,18 +1,20 @@
 #include "csapp.h"
 #include <time.h>
 
-#define MAX_CLIENT 100
+#define MAX_CLIENT 256
 #define ORDER_PER_CLIENT 10
-#define STOCK_NUM 5
+#define STOCK_NUM 1024
 #define BUY_SELL_MAX 10
 
 int main(int argc, char **argv) 
 {
+    clock_t start, end;
+
     pid_t pids[MAX_CLIENT];
     int runprocess = 0, status, i;
     int msglen;
     int clientfd, num_client;
-    char *host, *port, buf[MAXLINE], tmp[3];
+    char *host, *port, buf[MAXLINE], tmp[8];
     rio_t rio;
 
     if (argc != 4) {
@@ -23,6 +25,8 @@ int main(int argc, char **argv)
     host = argv[1];
     port = argv[2];
     num_client = atoi(argv[3]);
+    
+    start = clock();
 
     /*	fork for each client process	*/
     while(runprocess < num_client){
@@ -78,8 +82,8 @@ int main(int argc, char **argv)
                 }
                 Rio_readnb(&rio, buf, msglen);
                 buf[msglen] = '\0';
-                Fputs(buf, stdout);
-                usleep(1000000);
+                // Fputs(buf, stdout);
+                // usleep(1000000);
             }
 
             Close(clientfd);
@@ -97,7 +101,9 @@ int main(int argc, char **argv)
         waitpid(pids[i], &status, 0);
     }
 
+    end = clock();
 
+    printf("cpu_time = %ld\n", end - start);
     /*clientfd = Open_clientfd(host, port);
       Rio_readinitb(&rio, clientfd);
 
@@ -109,6 +115,7 @@ int main(int argc, char **argv)
 
       Close(clientfd); //line:netp:echoclient:close
       exit(0);*/
+
 
     return 0;
 }
