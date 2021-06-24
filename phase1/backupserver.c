@@ -6,6 +6,7 @@
 #include "stockdb.h"
 
 #define CONNINFOMAX 1024
+#define FDLISTMAX 64
 
 typedef struct conn_info {
     int connfd;
@@ -35,7 +36,23 @@ int main(int argc, char **argv)
     // TODO: load stock.txt
     stockdb_load(); // test
 
-    listenfd = Open_listenfd(argv[1]);
+    conn_info_t* conn_info_arr = Malloc(sizeof(conn_info_t) * FDLISTMAX);
+    for (int i = 0; i < FDLISTMAX; i++) {
+        conn_info_arr[i]->connfd = Open_listenfd_nonblocking(argv[1]);
+    }
+
+    for (int i = 0; i < FDLISTMAX; i++) {
+        
+        conn_info_arr[i]->connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        if (conn_info_arr[i]->connfd == -1) {
+            continue;
+        }
+        else {
+            
+        }
+    }
+
+
     while (1) {
         printf("listening\n");
         clientlen = sizeof(struct sockaddr_storage);
@@ -43,9 +60,6 @@ int main(int argc, char **argv)
         conn_info->connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, conn_info->client_hostname, CONNINFOMAX, conn_info->client_port, CONNINFOMAX, 0);
         Pthread_create(&tid, NULL, server_thread, conn_info);
-
-        //printf("Connected to (%s, %s)\n", client_hostname, client_port);
-        // echo(connfd);
     }
     exit(0);
 }

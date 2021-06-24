@@ -27,9 +27,8 @@ static stock_t* stock_search(bst_node_t* self, int id);
 
 void stockdb_load() {
     char buffer[MAXLINE];
-    FILE *fp;
     int id, cnt, price;
-    fp = Fopen("stock.txt", "r");
+    FILE* fp = Fopen("stock.txt", "r");
     stockdb = bst_new(compare_stock);
     while (Fgets(buffer, MAXLINE, fp) != NULL) {
         sscanf(buffer, "%d %d %d", &id, &cnt, &price);
@@ -44,9 +43,10 @@ void stockdb_show(char** buf_next) {
 }
 
 void stockdb_save() {
-    FILE* fp = Fopen("stock.txt", "w");
+    FILE *fp = Fopen("stock.txt", "w");
     stockdb_save2(stockdb->root, fp);
     Fclose(fp);
+    exit(0);
 }
 
 int stockdb_buy(int id, int cnt) {
@@ -56,7 +56,7 @@ int stockdb_buy(int id, int cnt) {
     }
     int success;
     P(&stock->mutex);
-    if (stock->cnt <= cnt) {
+    if (stock->cnt >= cnt) {
         stock->cnt -= cnt;
         success = STOCKDB_SUCCESS;
     }
@@ -139,7 +139,7 @@ static void stockdb_save2(bst_node_t* self, FILE* fp) {
     }
     stockdb_save2(self->left, fp);
     stock = bst_node_entry(self, stock_t, bst_node);
-    fprintf(fp, "%d %d %d\n", stock->id, stock->cnt, stock->price);
-    stockdb_save(self->right, fp);
+    fprintf(fp, "%d %d %d\n", stock->id, stock->cnt, stock->price); 
+    stockdb_save2(self->right, fp);
 }
 

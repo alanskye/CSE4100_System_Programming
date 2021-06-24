@@ -30,6 +30,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <assert.h>
+
 /* Default file permissions are DEF_MODE & ~DEF_UMASK */
 /* $begin createmasks */
 #define DEF_MODE   S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
@@ -192,10 +194,12 @@ ssize_t Rio_readuntilEOF(rio_t *rp, void *usrbuf, size_t maxlen);
 /* Reentrant protocol-independent client/server helpers */
 int open_clientfd(char *hostname, char *port);
 int open_listenfd(char *port);
+int open_listenfd_nonblocking(char* port);
 
 /* Wrappers for reentrant protocol-independent client/server helpers */
 int Open_clientfd(char *hostname, char *port);
 int Open_listenfd(char *port);
+int Open_listenfd_nonblocking(char* port);
 
 #endif /* __CSAPP_H__ */
 /* $end csapp.h */

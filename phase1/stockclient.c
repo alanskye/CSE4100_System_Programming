@@ -25,14 +25,15 @@ int main(int argc, char **argv)
         Rio_writen(clientfd, buf, strlen(buf));
         // read exactly n bytes
         Rio_readlineb(&rio, buf, MAXLINE);
-        printf("buffer content: %s\n", buf);
+        // printf("buffer content: %s\n", buf);
         msglen = -1;
         sscanf(buf, "%d", &msglen);
-        printf("msg len expected: %d\n", msglen);
+        // printf("msg len expected: %d\n", msglen);
         if (msglen == -1) {
             break;
         }
         Rio_readnb(&rio, buf, msglen);
+        buf[msglen] = '\0';
         Fputs(buf, stdout);
     }
     Close(clientfd); //line:netp:echoclient:close
