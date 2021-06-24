@@ -28,6 +28,7 @@ void buy(char** buf_next, int id, int cnt);
 void sigtstp_handler(int signum) {
     printf("\n=== storing stockdb.txt ===\n");
     stockdb_save();
+    printf("\n=== server quit!        ===\n");
 }
 
 int main(int argc, char **argv) 
@@ -43,6 +44,7 @@ int main(int argc, char **argv)
     }
 
     Signal(SIGTSTP, sigtstp_handler);
+    printf("Event Based Stock Server\n");
     printf("Press Ctrl+Z to quit the server and store stock.txt\n");
 
     // TODO: load stock.txt
